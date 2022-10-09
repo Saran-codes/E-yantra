@@ -55,6 +55,12 @@ def warp(img,squares):
     warped_img = cv2.warpPerspective(img, transform_matrix, (box_width, box_height))
     return [warped_img,bounding_rect,warped]
 
+def triangle_correction(shapes,centres):
+    for i in range(len(shapes)):
+        if shapes[i] == "Triangle":
+            centres[i][1] -=1
+    return shapes,centres
+
 first_node = np.array([[[94,94]],[[94,106]],[[106,94]],[[106,106]]])
 
 
@@ -177,6 +183,7 @@ def detect_medicine_packages(img):
             node = grids(first_node)[i]
             img_grid = warp(img,node)[0]
             shapes,centres,colours = shape_detector(img_grid,node,img)
+            shapes,centres = triangle_correction(shapes,centres)
             for j in range(len(shapes)):
                 tmp = []
                 tmp.append(shops[i//6])
