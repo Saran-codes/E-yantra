@@ -88,10 +88,61 @@ def grids(first_node):
             grids.append([ho_road[i][1],ho_road[i+1][0],ho_road[i][3],ho_road[i+1][2]])
     return np.array(grids)
 
+def centroid(approx,node):
+    m = len(approx)
+    x = y = 0
+    for i in range(m):
+        x += approx[i][0][0]/m
+        y += approx[i][0][1]/m
+    x = round((x+node[0][0][0])/10)*10
+    y = round((y+node[0][0][1])/10)*10
+    return [x,y]
+
+def which_colour(img,points):
+    colours = ["Green","Pink","Orange","Skyblue"]
+    bgr = [[0,255,0],[180,0,255],[0,127,255],[255,255,0]]
+    for i in range(len(bgr)):
+        if (img[points[1]][points[0]] == bgr[i]).all():
+            return colours[i]
+        
+def shape_detector(img_grid,node):
+    
+    if len(img_grid.shape) == 3 :
+        gray = cv2.cvtColor(img_grid,cv2.COLOR_BGR2GRAY)
+        #canny = cv2.Canny(gray,100,50)
+        canny = cv2.GaussianBlur(gray, (5, 5), 0)
+        canny = cv2.adaptiveThreshold(canny, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY_INV, 3, 1)
+    c,h = cv2.findContours(canny,cv2.RETR_LIST,cv2.CHAIN_APPROX_NONE)
+    shapes = []
+    centres = []
+    colours = []
+    for i in c:
+        if cv2.contourArea(i)<85*85:
+            peri = cv2.arcLength(i,True)
+            approx = cv2.approxPolyDP(i,0.02*peri,True)
+            nofcorners = len(approx)
+            
+            if  nofcorners == 4 and cv2.contourArea(i)>19.5*20:
+                x,y,w,h = cv2.boundingRect(approx)
+                aspectratio = w/float(h)
+                if aspectratio >=0.95 and aspectratio <= 1.05:
+                    centres.append(centroid(approx,node))
+                    shapes.append("Square")
+                    colours.append(which_colour(maze_image,centroid(approx,node)))
+            elif nofcorners == 3 and cv2.contourArea(i)>240:
+                centres.append(centroid(approx,node))
+                shapes.append("Triange")
+                colours.append(which_colour(maze_image,centroid(approx,node)))
+            elif cv2.contourArea(i)>380:
+                centres.append(centroid(approx,node))
+                shapes.append("Circle")
+                colours.append(which_colour(maze_image,centroid(approx,node)))
+    return shapes[::-1],centres[::-1],colours[::-1]
+
 address = ["A1","A2","A3","A4","A5","A6","A7","B1","B2","B3","B4","B5","B6","B7","C1","C2","C3","C4","C5","C6","C7","D1","D2","D3","D4","D5","D6","D7","E1","E2","E3","E4","E5","E6","E7","F1","F2","F3","F4","F5","F6","F7","G1","G2","G3","G4","G5","G6","G7"]
 h_roads = ["A1-B1","A2-B2","A3-B3","A4-B4","A5-B5","A6-B6","A7-B7","B1-C1","B2-C2","B3-C3","B4-C4","B5-C5","B6-C6","B7-C7","C1-D1","C2-D2","C3-D3","C4-D4","C5-D5","C6-D6","C7-D7","D1-E1","D2-E2","D3-E3","D4-E4","D5-E5","D6-E6","D7-E7","E1-F1","E2-F2","E3-F3","E4-F4","E5-F5","E6-F6","E7-F7","F1-G1","F2-G2","F3-G3","F4-G4","F5-G5","F6-G6","F7-G7"]
 v_roads = ["A1-A2","A2-A3","A3-A4","A4-A5","A5-A6","A6-A7","B1-B2","B2-B3","B3-B4","B4-B5","B5-B6","B6-B7","C1-C2","C2-C3","C3-C4","C4-C5","C5-C6","C6-C7","D1-D2","D2-D3","D3-D4","D4-D5","D5-D6","D6-D7","E1-E2","E2-E3","E3-E4","E4-E5","E5-E6","E6-E7","F1-F2","F2-F3","F3-F4","F4-F5","F5-F6","F6-F7","G1-G2","G2-G3","G3-G4","G4-G5","G5-G6","G6-G7"]
-
+shops = ["Shop_1","Shop_2","Shop_3","Shop_4","Shop_5","Shop_6"]
 
 
 ##############################################################
@@ -120,13 +171,26 @@ def detect_vertical_roads_under_construction(img):
             vertical_roads_.append(v_roads[i])
     return {"vertical_roads_under_construction":vertical_roads_}
 def detect_medicine_packages(img):
-    return
+    medicine_packages_present = []
+    for i in range(len(grids(first_node))):
+        if i%6==0:
+            node = grids(first_node)[i]
+            img_grid = warp(img,node)[0]
+            shapes,centres,colours = shape_detector(img_grid,node)
+            for j in range(len(shapes)):
+                tmp = []
+                tmp.append(shops[i//6])
+                tmp.append(colours[j])
+                tmp.append(shapes[j])
+                tmp.append(centres[j])
+                medicine_packages_present.append(tmp)
+    return {"medicine_packages_present" : medicine_packages_present}
 def detect_arena_parameters(img):
     D1 = detect_traffic_signals(img)
     D2 = detect_horizontal_roads_under_construction(img)
     D3 = detect_vertical_roads_under_construction(img)
     D4 = detect_medicine_packages(img)
-    D5={**D1,**D2,**D3}
+    D5={**D1,**D2,**D3,**D4}
     return D5
 
 ######### YOU ARE NOT ALLOWED TO MAKE CHANGES TO THIS FUNCTION #########	
