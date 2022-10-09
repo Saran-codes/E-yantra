@@ -131,7 +131,7 @@ def shape_detector(img_grid,node,maze_img):
                     colours.append(which_colour(maze_img,centroid(approx,node)))
             elif nofcorners == 3 and cv2.contourArea(i)>240:
                 centres.append(centroid(approx,node))
-                shapes.append("Triange")
+                shapes.append("Triangle")
                 colours.append(which_colour(maze_img,centroid(approx,node)))
             elif cv2.contourArea(i)>380:
                 centres.append(centroid(approx,node))
