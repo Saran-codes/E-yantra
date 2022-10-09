@@ -36,6 +36,13 @@ import numpy as np
 def find_colour(img,colour):
     if (img[5][10] == colour).all():#BGR
         return True
+
+def swap(l,i):
+    tmp = l[i]
+    l[i] = l[i+1]
+    l[i+1] = tmp
+    return l
+
 def warp(img,squares):
     #As the coordinates are not arranged properly we reaarange them properly by checking the sum and difference of x and y coordinates
     pts = np.squeeze(squares)    
@@ -60,6 +67,29 @@ def triangle_correction(shapes,centres):
         if shapes[i] == "Triangle":
             centres[i][1] -=1
     return shapes,centres
+
+def order_correction(shapes,centres,colours):
+    if len(colours) == 1:
+        return shapes,centres,colours
+    colour = ["Green","Orange","Pink","Skyblue"]
+    for i in range(len(colours)):
+        for j in range(4):
+            if colours[i] == colour[j]:
+                colours[i] = j
+    flag = False
+    while(flag == False):
+        count = 0;
+        for i in range(len(colours)-1):
+            if colours[i] > colours[i+1]:
+                colours = swap(colours,i)
+                shapes  = swap(shapes,i)
+                centres = swap(centres,i)
+                count+=1
+        if count==0:
+            flag = True
+    for i in range(len(colours)):
+        colours[i] = colour[colours[i]]
+    return shapes,centres,colours
 
 first_node = np.array([[[94,94]],[[94,106]],[[106,94]],[[106,106]]])
 
@@ -184,6 +214,7 @@ def detect_medicine_packages(img):
             img_grid = warp(img,node)[0]
             shapes,centres,colours = shape_detector(img_grid,node,img)
             shapes,centres = triangle_correction(shapes,centres)
+            shapes,centres,colours = order_correction(shapes,centres,colours)
             for j in range(len(shapes)):
                 tmp = []
                 tmp.append(shops[i//6])
